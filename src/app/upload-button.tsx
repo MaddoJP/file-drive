@@ -28,6 +28,7 @@ import { useState } from "react";
 import { useToast } from "../components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { Doc } from "../../convex/_generated/dataModel";
 
 const formSchema = z.object({
   title: z.string().min(1).max(200),
@@ -55,17 +56,26 @@ export function UploadButton() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!orgId) return;
 
+    const fileType = values.file[0].type;
+
     const postUrl = await generateUploadUrl();
     const result = await fetch(postUrl, {
       method: "POST",
-      headers: { "Content-Type": values.file[0].type },
+      headers: { "Content-Type": fileType },
       body: values.file[0],
     });
     const { storageId } = await result.json();
 
+    const types = {
+      "image/png": "image",
+      "application/pdf": "pdf",
+      "text/csv": "csv",
+    } as Record<string, Doc<"files">["type"]>;
+
     try {
       await createFile({
         name: values.title,
+        type: types[fileType],
         fileId: storageId,
         orgId,
       });
